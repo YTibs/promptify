@@ -2,8 +2,21 @@ import gradio as gr
 import cv2
 import os
 from PIL import Image
-from transformers import BlipProcessor, BlipForConditionalGeneration
+from transformers import BlipProcessor, BlipForConditionalGeneration, pipeline
 import torch
+
+# Load summarization pipeline once
+summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+
+def summarize_with_bart(captions):
+    # Join captions into a paragraph
+    text = " ".join(captions)
+
+    # Hugging Face models have token limits; we truncate to ~1024 chars
+    text = text[:1024]
+
+    summary = summarizer(text, max_length=60, min_length=20, do_sample=False)
+    return summary[0]['summary_text']
 
 # Load BLIP model once when the app starts
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -41,9 +54,9 @@ def process_video(video_path, num_frames):
     cap.release()
 
     # Combine captions into a paragraph
-    combined_caption = " ".join(captions)
+    summary = summarize_with_bart(captions)
 
-    return extracted_frames[0], combined_caption
+    return extracted_frames[0], summary
 
 demo = gr.Interface(
     fn=process_video,
