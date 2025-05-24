@@ -9,32 +9,48 @@ import torch
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
 model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
-def process_video(video_path):
+def process_video(video_path, num_frames):
     os.makedirs("frames", exist_ok=True)
 
-    # Extract frame
     cap = cv2.VideoCapture(video_path)
-    cap.set(cv2.CAP_PROP_POS_MSEC, 1000)
-    success, frame = cap.read()
-    
-    if not success:
-        return None, "Could not extract frame from video."
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    frame_interval = max(total_frames // (num_frames + 1), 1)
 
-    frame_path = "frames/frame.jpg"
-    cv2.imwrite(frame_path, frame)
+    extracted_frames = []
+    captions = []
 
-    # Generate caption with BLIP
-    image = Image.open(frame_path).convert("RGB")
-    inputs = processor(image, return_tensors="pt")
-    with torch.no_grad():
-        out = model.generate(**inputs)
-    caption = processor.decode(out[0], skip_special_tokens=True)
+    for i in range(1, num_frames + 1):
+        frame_number = i * frame_interval
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+        success, frame = cap.read()
+        if not success:
+            continue
 
-    return frame_path, caption
+        frame_path = f"frames/frame_{i}.jpg"
+        cv2.imwrite(frame_path, frame)
+        extracted_frames.append(frame_path)
+
+        # Generate caption for each frame
+        image = Image.open(frame_path).convert("RGB")
+        inputs = processor(image, return_tensors="pt")
+        with torch.no_grad():
+            out = model.generate(**inputs)
+        caption = processor.decode(out[0], skip_special_tokens=True)
+        captions.append(caption)
+
+    cap.release()
+
+    # Combine captions into a paragraph
+    combined_caption = " ".join(captions)
+
+    return extracted_frames[0], combined_caption
 
 demo = gr.Interface(
     fn=process_video,
-    inputs=gr.Video(label="Upload a short video"),
+    inputs=[
+        gr.Video(label="Upload a short video"),
+        gr.Slider(2, 10, value=4, step=1, label="Number of frames to extract")
+    ],
     outputs=[
         gr.Image(type="filepath", label="Extracted Frame"),
         gr.Textbox(label="AI Description of the Task")
