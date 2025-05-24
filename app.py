@@ -4,6 +4,14 @@ import os
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration, pipeline
 import torch
+import csv
+from datetime import datetime
+
+# Log feedback to a CSV file
+def log_feedback(summary, rating):
+    with open("feedback_log.csv", mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([datetime.now().isoformat(), summary, rating])
 
 # Load summarization pipeline once
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
@@ -58,18 +66,32 @@ def process_video(video_path, num_frames):
 
     return extracted_frames[0], summary
 
-demo = gr.Interface(
-    fn=process_video,
-    inputs=[
-        gr.Video(label="Upload a short video"),
-        gr.Slider(2, 10, value=4, step=1, label="Number of frames to extract")
-    ],
-    outputs=[
-        gr.Image(type="filepath", label="Extracted Frame"),
-        gr.Textbox(label="AI Description of the Task")
-    ],
-    title="Promptify",
-    description="Upload a short video of a task. We'll extract a frame and describe what you're doing."
-)
+# Handle feedback from the user
+def handle_feedback(summary, feedback):
+    log_feedback(summary, feedback)
+    return f"Thanks for your feedback: {feedback}"
+
+# Create the Gradio interface
+with gr.Blocks() as demo:
+    video_input = gr.Video(label="Upload a short video")
+    frame_slider = gr.Slider(2, 10, value=4, step=1, label="Number of frames to extract")
+    submit_btn = gr.Button("Submit")
+
+    extracted_frame = gr.Image(type="filepath", label="Extracted Frame")
+    summary_output = gr.Textbox(label="AI Description of the Task")
+
+    with gr.Row():
+        good_btn = gr.Button("👍 Good")
+        bad_btn = gr.Button("👎 Bad")
+    feedback_msg = gr.Textbox(label="Feedback Result", interactive=False)
+
+    submit_btn.click(
+        fn=process_video,
+        inputs=[video_input, frame_slider],
+        outputs=[extracted_frame, summary_output]
+    )
+
+    good_btn.click(fn=handle_feedback, inputs=[summary_output, gr.Textbox(value="Good", visible=False)], outputs=feedback_msg)
+    bad_btn.click(fn=handle_feedback, inputs=[summary_output, gr.Textbox(value="Bad", visible=False)], outputs=feedback_msg)
 
 demo.launch()
