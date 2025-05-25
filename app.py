@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Log feedback to a CSV file
 def log_feedback(summary, rating):
-    with open("feedback_log.csv", mode="a", newline="") as file:
+    with open("./feedback_log.csv", mode="a", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([datetime.now().isoformat(), summary, rating])
 
