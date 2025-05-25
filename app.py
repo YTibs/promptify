@@ -73,7 +73,12 @@ def handle_feedback(summary, feedback):
 
 # Create the Gradio interface
 with gr.Blocks() as demo:
-    video_input = gr.Video(label="Upload a short video")
+    gr.Markdown("## Promptify\nTurn short videos into smart summaries using AI. Upload your video and we'll do the rest.")
+    
+    with gr.Row():
+        with gr.Column(scale=1):
+            video_input = gr.Video(label="Upload a short video", height=240)
+
     frame_slider = gr.Slider(2, 10, value=4, step=1, label="Number of frames to extract")
     submit_btn = gr.Button("Submit")
 
