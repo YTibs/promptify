@@ -77,7 +77,7 @@ with gr.Blocks() as demo:
     
     with gr.Row():
         with gr.Column(scale=1):
-            video_input = gr.Video(label="Upload a short video", height=240)
+            video_input = gr.Video(label="Upload a short video", height=280)
 
     frame_slider = gr.Slider(2, 10, value=4, step=1, label="Number of frames to extract")
     submit_btn = gr.Button("Submit")
@@ -96,7 +96,11 @@ with gr.Blocks() as demo:
         outputs=[extracted_frame, summary_output]
     )
 
-    good_btn.click(fn=handle_feedback, inputs=[summary_output, gr.Textbox(value="Good", visible=False)], outputs=feedback_msg)
-    bad_btn.click(fn=handle_feedback, inputs=[summary_output, gr.Textbox(value="Bad", visible=False)], outputs=feedback_msg)
+    good_feedback = gr.State("Good")
+    bad_feedback = gr.State("Bad")
 
+    good_btn.click(fn=handle_feedback, inputs=[summary_output, good_feedback], outputs=feedback_msg)
+    bad_btn.click(fn=handle_feedback, inputs=[summary_output, bad_feedback], outputs=feedback_msg)
+
+    
 demo.launch()
